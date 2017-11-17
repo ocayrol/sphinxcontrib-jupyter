@@ -1,0 +1,19 @@
+How to upload the project to pip:
+
+
+1. Ensure that the project version numbering is up to date in all the right locations. They are:
+
+- /jupyter/__init__.py
+- setup.py
+
+
+2. Create the project 'egg' with
+
+@todo
+
+
+
+3. Upload the project to PIP with
+
+@todo
+

@@ -32,6 +32,8 @@ class JupyterTranslator(JupyterCodeTranslator):
         self.list_level = 0
         self.in_citation = False
 
+        self.table_builder = None
+
     # specific visit and depart methods
     # ---------------------------------
 
@@ -71,6 +73,8 @@ class JupyterTranslator(JupyterCodeTranslator):
 
         if self.in_code_block:
             self.code_lines.append(text)
+        elif self.table_builder:
+            self.table_builder['line_pending'] += text
         else:
             self.markdown_lines.append(text)
 
@@ -87,7 +91,11 @@ class JupyterTranslator(JupyterCodeTranslator):
         """inline math"""
         math_text = node.attributes["latex"].strip()
         formatted_text = "$ {} $".format(math_text)
-        self.markdown_lines.append(formatted_text)
+
+        if self.table_builder:
+            self.table_builder['line_pending'] += formatted_text
+        else:
+            self.markdown_lines.append(formatted_text)
 
     def visit_displaymath(self, node):
         """directive math"""
@@ -113,6 +121,56 @@ class JupyterTranslator(JupyterCodeTranslator):
 
         self.markdown_lines.append("</td></tr></table>")
 
+    def visit_table(self, node):
+        self.table_builder = dict()
+        self.table_builder['column_widths'] = []
+        self.table_builder['lines'] = []
+        self.table_builder['line_pending'] = ""
+
+        if 'align' in node:
+            self.table_builder['align'] = node['align']
+        else:
+            self.table_builder['align'] = "center"
+
+    def depart_table(self, node):
+        table_lines = "".join(self.table_builder['lines'])
+        self.markdown_lines.append(table_lines)
+        self.table_builder = None
+
+    def visit_thead(self, node):
+        self.table_builder['current_line'] = 0
+
+    def depart_thead(self, node):
+        # create the header line which contains the alignment for each column
+        header_line = "|"
+        for col_width in self.table_builder['column_widths']:
+            header_line += self.generate_alignment_line(col_width, self.table_builder['align'])
+            header_line += "|"
+
+        self.table_builder['lines'].append(header_line + "\n")
+
+    def generate_alignment_line(self, line_length, alignment):
+        left = ":" if alignment != "right" else "-"
+        right = ":" if alignment != "left" else "-"
+
+        return left + "-" * (line_length - 2) + right
+
+    def visit_colspec(self, node):
+        self.table_builder['column_widths'].append(node['colwidth'])
+
+    def visit_row(self, node):
+        self.table_builder['line_pending'] = "|"
+
+    def depart_row(self, node):
+        finished_line = self.table_builder['line_pending'] + "\n"
+        self.table_builder['lines'].append(finished_line)
+
+    def visit_entry(self, node):
+        pass
+
+    def depart_entry(self, node):
+        self.table_builder['line_pending'] += "|"
+
     def visit_raw(self, node):
         pass
 
@@ -127,6 +185,8 @@ class JupyterTranslator(JupyterCodeTranslator):
     def depart_paragraph(self, node):
         if self.list_level > 0:
             self.markdown_lines.append(self.sep_lines)
+        elif self.table_builder:
+            pass
         else:
             self.markdown_lines.append(self.sep_paras)
 
@@ -137,12 +197,16 @@ class JupyterTranslator(JupyterCodeTranslator):
         if self.in_topic:
             self.markdown_lines.append(
                 "{} ".format("#" * (self.section_level + 1)))
+        elif self.table_builder:
+            self.markdown_lines.append(
+                "### {}\n".format(node.astext()))
         else:
             self.markdown_lines.append(
                 "{} ".format("#" * self.section_level))
 
     def depart_title(self, node):
-        self.markdown_lines.append(self.sep_paras)
+        if not self.table_builder:
+            self.markdown_lines.append(self.sep_paras)
 
     # emphasis(italic)
     def visit_emphasis(self, node):
