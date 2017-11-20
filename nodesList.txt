@@ -1,0 +1,15 @@
+document
+section
+topic
+sidebar
+title
+subtitle
+decoration
+docinfo
+transition
+address,author,authors,contact,copyright,date,field,organization,revision,status,version
+footer,header
+admonition,attention,block_quote,bullet_list,caution,citation,comment,compound,container,danger,definition_list,doctest_block,enumerated_list,error,field_list,figure,footnote,hint,image,important,line_block,literal_block,note,option_list,paragraph,pending,raw,rubric,substitution_definition,system_message,table,target,tip,warning
+attribution,caption,classifier,colspec,field_name,label,line,option_argument,option_string,term
+definition,definition_list_item,description,entry,field,field_body,legend,list_item,option,option_group,option_list_item,row,tbody,tgroup,thead
+abbreviation,acronym,citation_reference,emphasis,footnote_reference,generated,image,inline,literal,math,problematic,reference,strong,subscript,substitution_reference,superscript,target,title_reference,raw

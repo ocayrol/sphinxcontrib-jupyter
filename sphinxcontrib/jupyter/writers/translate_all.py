@@ -34,375 +34,619 @@ class JupyterTranslator(JupyterCodeTranslator):
 
         self.table_builder = None
 
+        fileName = document.settings._source.split("/")[-1].split(".")[0] + ".xmlDump"
+        self.dumpFile = open("/home/nsifniotis/PycharmProjects/dumpfiles/" + fileName, "w")
+
     # specific visit and depart methods
     # ---------------------------------
 
-    # ==============
-    #  Sections
-    # ==============
     def visit_document(self, node):
-        """at start
-        """
-        JupyterCodeTranslator.visit_document(self, node)
+        self.dumpFile.write("<document>\n")
 
     def depart_document(self, node):
-        """at end
+        self.dumpFile.write("</document>\n")
+        self.dumpFile.close()
 
-        Almost the exact same implementation as that of the superclass.
-        """
-        self.add_markdown_cell()
-        JupyterCodeTranslator.depart_document(self, node)
-
-    def visit_topic(self, node):
-        self.in_topic = True
-
-    def depart_topic(self, node):
-        self.in_topic = False
-
-    def visit_section(self, node):
-        self.section_level += 1
-
-    def depart_section(self, node):
-        self.section_level -= 1
-
-    # =================
-    # Inline elements
-    # =================
     def visit_Text(self, node):
-        text = node.astext()
-
-        if self.in_code_block:
-            self.code_lines.append(text)
-        elif self.table_builder:
-            self.table_builder['line_pending'] += text
-        else:
-            self.markdown_lines.append(text)
+        self.dumpFile.write("<text>\n")
 
     def depart_Text(self, node):
-        pass
+        self.dumpFile.write("</text>\n")
 
-    # image
-    def visit_image(self, node):
-        uri = node.attributes["uri"]
-        self.markdown_lines.append("![{0}]({0})".format(uri))
+    def visit_section(self, node):
+        self.dumpFile.write("<section>\n")
 
-    # math
-    def visit_math(self, node):
-        """inline math"""
-        math_text = node.attributes["latex"].strip()
-        formatted_text = "$ {} $".format(math_text)
+    def depart_section(self, node):
+        self.dumpFile.write("</section>\n")
 
-        if self.table_builder:
-            self.table_builder['line_pending'] += formatted_text
-        else:
-            self.markdown_lines.append(formatted_text)
+    def visit_topic(self, node):
+        self.dumpFile.write("<topic>\n")
 
-    def visit_displaymath(self, node):
-        """directive math"""
-        math_text = node.attributes["latex"].strip()
+    def depart_topic(self, node):
+        self.dumpFile.write("</topic>\n")
 
-        if self.list_level == 0:
-            formatted_text = "$$\n{0}\n$${1}".format(
-                math_text, self.sep_paras)
-        else:
-            formatted_text = "$$\n{0}\n$${1}".format(
-                math_text, self.sep_paras)
+    def visit_sidebar(self, node):
+        self.dumpFile.write("<sidebar>\n")
 
-        formatted_text = "<table width=100%><tr style='background-color: #FFFFFF !important;'><td width=75%>" \
-                         + formatted_text \
-                         + "</td><td width=25% style='text-align:center !important;'>"
+    def depart_sidebar(self, node):
+        self.dumpFile.write("</sidebar>\n")
 
-        self.markdown_lines.append(formatted_text)
-
-        # Add the line number reference.
-        if node["ids"]:
-            referenceBuilder = "(" + str(node["number"]) + ")"
-            self.markdown_lines.append(referenceBuilder)
-
-        self.markdown_lines.append("</td></tr></table>")
-
-    def visit_table(self, node):
-        self.table_builder = dict()
-        self.table_builder['column_widths'] = []
-        self.table_builder['lines'] = []
-        self.table_builder['line_pending'] = ""
-
-        if 'align' in node:
-            self.table_builder['align'] = node['align']
-        else:
-            self.table_builder['align'] = "center"
-
-    def depart_table(self, node):
-        table_lines = "".join(self.table_builder['lines'])
-        self.markdown_lines.append(table_lines)
-        self.table_builder = None
-
-    def visit_thead(self, node):
-        self.table_builder['current_line'] = 0
-
-    def depart_thead(self, node):
-        # create the header line which contains the alignment for each column
-        header_line = "|"
-        for col_width in self.table_builder['column_widths']:
-            header_line += self.generate_alignment_line(col_width, self.table_builder['align'])
-            header_line += "|"
-
-        self.table_builder['lines'].append(header_line + "\n")
-
-    def generate_alignment_line(self, line_length, alignment):
-        left = ":" if alignment != "right" else "-"
-        right = ":" if alignment != "left" else "-"
-
-        return left + "-" * (line_length - 2) + right
-
-    def visit_colspec(self, node):
-        self.table_builder['column_widths'].append(node['colwidth'])
-
-    def visit_row(self, node):
-        self.table_builder['line_pending'] = "|"
-
-    def depart_row(self, node):
-        finished_line = self.table_builder['line_pending'] + "\n"
-        self.table_builder['lines'].append(finished_line)
-
-    def visit_entry(self, node):
-        pass
-
-    def depart_entry(self, node):
-        self.table_builder['line_pending'] += "|"
-
-    def visit_raw(self, node):
-        pass
-
-    # ==================
-    #  markdown cells
-    # ==================
-
-    # general paragraph
-    def visit_paragraph(self, node):
-        pass
-
-    def depart_paragraph(self, node):
-        if self.list_level > 0:
-            self.markdown_lines.append(self.sep_lines)
-        elif self.table_builder:
-            pass
-        else:
-            self.markdown_lines.append(self.sep_paras)
-
-    # title(section)
     def visit_title(self, node):
-        self.add_markdown_cell()
-
-        if self.in_topic:
-            self.markdown_lines.append(
-                "{} ".format("#" * (self.section_level + 1)))
-        elif self.table_builder:
-            self.markdown_lines.append(
-                "### {}\n".format(node.astext()))
-        else:
-            self.markdown_lines.append(
-                "{} ".format("#" * self.section_level))
+        self.dumpFile.write("<title>\n")
 
     def depart_title(self, node):
-        if not self.table_builder:
-            self.markdown_lines.append(self.sep_paras)
+        self.dumpFile.write("</title>\n")
 
-    # emphasis(italic)
-    def visit_emphasis(self, node):
-        self.markdown_lines.append("*")
+    def visit_subtitle(self, node):
+        self.dumpFile.write("<subtitle>\n")
 
-    def depart_emphasis(self, node):
-        self.markdown_lines.append("*")
+    def depart_subtitle(self, node):
+        self.dumpFile.write("</subtitle>\n")
 
-    # strong(bold)
-    def visit_strong(self, node):
-        self.markdown_lines.append("**")
+    def visit_decoration(self, node):
+        self.dumpFile.write("<decoration>\n")
 
-    def depart_strong(self, node):
-        self.markdown_lines.append("**")
+    def depart_decoration(self, node):
+        self.dumpFile.write("</decoration>\n")
 
-    # figures
-    def visit_figure(self, node):
-        pass
+    def visit_docinfo(self, node):
+        self.dumpFile.write("<docinfo>\n")
 
-    def depart_figure(self, node):
-        self.markdown_lines.append(self.sep_lines)
+    def depart_docinfo(self, node):
+        self.dumpFile.write("</docinfo>\n")
 
-    # reference
-    def visit_reference(self, node):
-        """anchor link"""
-        self.in_reference = True
-        self.markdown_lines.append("[")
-        self.reference_text_start = len(self.markdown_lines)
+    def visit_transition(self, node):
+        self.dumpFile.write("<transition>\n")
 
-    def depart_reference(self, node):
-        if self.in_topic:
-            # Jupyter Notebook uses the target text as its id
-            uri_text = "".join(self.markdown_lines[self.reference_text_start:]).strip()
-            uri_text = re.sub(
-                self.URI_SPACE_REPLACE_FROM, self.URI_SPACE_REPLACE_TO, uri_text)
-            formatted_text = "](#{})".format(uri_text)
-            self.markdown_lines.append(formatted_text)
+    def depart_transition(self, node):
+        self.dumpFile.write("</transition>\n")
 
-        else:
-            # if refuri exists, then it includes id reference(#hoge)
-            if "refuri" in node.attributes:
-                refuri = node["refuri"]
+    def visit_address(self, node):
+        self.dumpFile.write("<address>\n")
 
-                # add default extension(.ipynb)
-                if "internal" in node.attributes and node.attributes["internal"] == True:
-                    refuri = self.add_extension_to_inline_link(refuri, self.default_ext)
-            else:
-                # in-page link
-                if "refid" in node:
-                    refid = node["refid"]
-                    refuri = "#{}".format(refid)
-                # error
-                else:
-                    self.error("Invalid reference")
-                    refuri = ""
+    def depart_address(self, node):
+        self.dumpFile.write("</address>\n")
 
-            self.markdown_lines.append("]({})".format(refuri))
+    def visit_author(self, node):
+        self.dumpFile.write("<author>\n")
 
-        self.in_reference = False
+    def depart_author(self, node):
+        self.dumpFile.write("</author>\n")
 
-    # target: make anchor
-    def visit_target(self, node):
-        if "refid" in node.attributes:
-            refid = node.attributes["refid"]
-            self.markdown_lines.append(
-                "\n<a id='{}'></a>\n".format(refid))
+    def visit_authors(self, node):
+        self.dumpFile.write("<authors>\n")
 
-    # list items
+    def depart_authors(self, node):
+        self.dumpFile.write("</authors>\n")
+
+    def visit_contact(self, node):
+        self.dumpFile.write("<contact>\n")
+
+    def depart_contact(self, node):
+        self.dumpFile.write("</contact>\n")
+
+    def visit_copyright(self, node):
+        self.dumpFile.write("<copyright>\n")
+
+    def depart_copyright(self, node):
+        self.dumpFile.write("</copyright>\n")
+
+    def visit_date(self, node):
+        self.dumpFile.write("<date>\n")
+
+    def depart_date(self, node):
+        self.dumpFile.write("</date>\n")
+
+    def visit_field(self, node):
+        self.dumpFile.write("<field>\n")
+
+    def depart_field(self, node):
+        self.dumpFile.write("</field>\n")
+
+    def visit_organization(self, node):
+        self.dumpFile.write("<organization>\n")
+
+    def depart_organization(self, node):
+        self.dumpFile.write("</organization>\n")
+
+    def visit_revision(self, node):
+        self.dumpFile.write("<revision>\n")
+
+    def depart_revision(self, node):
+        self.dumpFile.write("</revision>\n")
+
+    def visit_status(self, node):
+        self.dumpFile.write("<status>\n")
+
+    def depart_status(self, node):
+        self.dumpFile.write("</status>\n")
+
+    def visit_version(self, node):
+        self.dumpFile.write("<version>\n")
+
+    def depart_version(self, node):
+        self.dumpFile.write("</version>\n")
+
+    def visit_footer(self, node):
+        self.dumpFile.write("<footer>\n")
+
+    def depart_footer(self, node):
+        self.dumpFile.write("</footer>\n")
+
+    def visit_header(self, node):
+        self.dumpFile.write("<header>\n")
+
+    def depart_header(self, node):
+        self.dumpFile.write("</header>\n")
+
+    def visit_admonition(self, node):
+        self.dumpFile.write("<admonition>\n")
+
+    def depart_admonition(self, node):
+        self.dumpFile.write("</admonition>\n")
+
+    def visit_attention(self, node):
+        self.dumpFile.write("<attention>\n")
+
+    def depart_attention(self, node):
+        self.dumpFile.write("</attention>\n")
+
+    def visit_block_quote(self, node):
+        self.dumpFile.write("<block_quote>\n")
+
+    def depart_block_quote(self, node):
+        self.dumpFile.write("</block_quote>\n")
+
     def visit_bullet_list(self, node):
-        self.list_level += 1
-        # markdown does not have option changing bullet chars
-        self.bullets.append("-")
-        self.indents.append(len(self.bullets[-1]) + 1)
+        self.dumpFile.write("<bullet_list>\n")
 
     def depart_bullet_list(self, node):
-        self.list_level -= 1
-        if self.list_level == 0:
-            self.markdown_lines.append(self.sep_paras)
-            if self.in_topic:
-                self.add_markdown_cell()
+        self.dumpFile.write("</bullet_list>\n")
 
-        self.bullets.pop()
-        self.indents.pop()
+    def visit_caution(self, node):
+        self.dumpFile.write("<caution>\n")
 
-    def visit_enumerated_list(self, node):
-        self.list_level += 1
-        # markdown does not have option changing bullet chars
-        self.bullets.append("1.")
-        self.indents.append(len(self.bullets[-1]) + 1)
+    def depart_caution(self, node):
+        self.dumpFile.write("</caution>\n")
 
-    def depart_enumerated_list(self, node):
-        self.list_level -= 1
-        if self.list_level == 0:
-            self.markdown_lines.append(self.sep_paras)
-
-        self.bullets.pop()
-        self.indents.pop()
-
-    def visit_list_item(self, node):
-        # self.first_line_in_list_item = True
-        head = "{} ".format(self.bullets[-1])
-        self.markdown_lines.append(head)
-        self.list_item_starts.append(len(self.markdown_lines))
-
-    def depart_list_item(self, node):
-        # self.first_line_in_list_item = False
-
-        list_item_start = self.list_item_starts.pop()
-        indent = self.indent_char * self.indents[-1]
-        br_removed_flag = False
-
-        # remove last breakline
-        if self.markdown_lines[-1][-1] == "\n":
-            br_removed_flag = True
-            self.markdown_lines[-1] = self.markdown_lines[-1][:-1]
-
-        for i in range(list_item_start, len(self.markdown_lines)):
-            self.markdown_lines[i] = self.markdown_lines[i].replace(
-                "\n", "\n{}".format(indent))
-
-        # add breakline
-        if br_removed_flag:
-            self.markdown_lines.append("\n")
-
-    # definition list
-    def visit_definition_list(self, node):
-        self.markdown_lines.append("\n<dl style='margin: 20px 0;'>\n")
-
-    def depart_definition_list(self, node):
-        self.markdown_lines.append("\n</dl>{}".format(self.sep_paras))
-
-    def visit_term(self, node):
-        self.markdown_lines.append("<dt>")
-
-    def depart_term(self, node):
-        self.markdown_lines.append("</dt>\n")
-
-    def visit_definition(self, node):
-        self.markdown_lines.append("<dd>\n")
-
-    def depart_definition(self, node):
-        self.markdown_lines.append("</dd>\n")
-
-    # field list
-    def visit_field_list(self, node):
-        self.visit_definition_list(node)
-
-    def depart_field_list(self, node):
-        self.depart_definition_list(node)
-
-    def visit_field_name(self, node):
-        self.visit_term(node)
-
-    def depart_field_name(self, node):
-        self.depart_term(node)
-
-    def visit_field_body(self, node):
-        self.visit_definition(node)
-
-    def depart_field_body(self, node):
-        self.depart_definition(node)
-
-    # citation
     def visit_citation(self, node):
-        self.in_citation = True
-        if "ids" in node.attributes:
-            ids = node.attributes["ids"]
-            id_text = ""
-            for id_ in ids:
-                id_text += "{} ".format(id_)
-            else:
-                id_text = id_text[:-1]
-
-            self.markdown_lines.append(
-                "<a id='{}'></a>\n".format(id_text))
+        self.dumpFile.write("<citation>\n")
 
     def depart_citation(self, node):
-        self.in_citation = False
+        self.dumpFile.write("</citation>\n")
 
-    # label
+    def visit_comment(self, node):
+        self.dumpFile.write("<comment>\n")
+
+    def depart_comment(self, node):
+        self.dumpFile.write("</comment>\n")
+
+    def visit_compound(self, node):
+        self.dumpFile.write("<compound>\n")
+
+    def depart_compound(self, node):
+        self.dumpFile.write("</compound>\n")
+
+    def visit_container(self, node):
+        self.dumpFile.write("<container>\n")
+
+    def depart_container(self, node):
+        self.dumpFile.write("</container>\n")
+
+    def visit_danger(self, node):
+        self.dumpFile.write("<danger>\n")
+
+    def depart_danger(self, node):
+        self.dumpFile.write("</danger>\n")
+
+    def visit_definition_list(self, node):
+        self.dumpFile.write("<definition_list>\n")
+
+    def depart_definition_list(self, node):
+        self.dumpFile.write("</definition_list>\n")
+
+    def visit_doctest_block(self, node):
+        self.dumpFile.write("<doctest_block>\n")
+
+    def depart_doctest_block(self, node):
+        self.dumpFile.write("</doctest_block>\n")
+
+    def visit_enumerated_list(self, node):
+        self.dumpFile.write("<enumerated_list>\n")
+
+    def depart_enumerated_list(self, node):
+        self.dumpFile.write("</enumerated_list>\n")
+
+    def visit_error(self, node):
+        self.dumpFile.write("<error>\n")
+
+    def depart_error(self, node):
+        self.dumpFile.write("</error>\n")
+
+    def visit_field_list(self, node):
+        self.dumpFile.write("<field_list>\n")
+
+    def depart_field_list(self, node):
+        self.dumpFile.write("</field_list>\n")
+
+    def visit_figure(self, node):
+        self.dumpFile.write("<figure>\n")
+
+    def depart_figure(self, node):
+        self.dumpFile.write("</figure>\n")
+
+    def visit_footnote(self, node):
+        self.dumpFile.write("<footnote>\n")
+
+    def depart_footnote(self, node):
+        self.dumpFile.write("</footnote>\n")
+
+    def visit_hint(self, node):
+        self.dumpFile.write("<hint>\n")
+
+    def depart_hint(self, node):
+        self.dumpFile.write("</hint>\n")
+
+    def visit_image(self, node):
+        self.dumpFile.write("<image>\n")
+
+    def depart_image(self, node):
+        self.dumpFile.write("</image>\n")
+
+    def visit_important(self, node):
+        self.dumpFile.write("<important>\n")
+
+    def depart_important(self, node):
+        self.dumpFile.write("</important>\n")
+
+    def visit_line_block(self, node):
+        self.dumpFile.write("<line_block>\n")
+
+    def depart_line_block(self, node):
+        self.dumpFile.write("</line_block>\n")
+
+    def visit_literal_block(self, node):
+        self.dumpFile.write("<literal_block>\n")
+
+    def depart_literal_block(self, node):
+        self.dumpFile.write("</literal_block>\n")
+
+    def visit_note(self, node):
+        self.dumpFile.write("<note>\n")
+
+    def depart_note(self, node):
+        self.dumpFile.write("</note>\n")
+
+    def visit_option_list(self, node):
+        self.dumpFile.write("<option_list>\n")
+
+    def depart_option_list(self, node):
+        self.dumpFile.write("</option_list>\n")
+
+    def visit_paragraph(self, node):
+        self.dumpFile.write("<paragraph>\n")
+
+    def depart_paragraph(self, node):
+        self.dumpFile.write("</paragraph>\n")
+
+    def visit_pending(self, node):
+        self.dumpFile.write("<pending>\n")
+
+    def depart_pending(self, node):
+        self.dumpFile.write("</pending>\n")
+
+    def visit_raw(self, node):
+        self.dumpFile.write("<raw>\n")
+
+    def depart_raw(self, node):
+        self.dumpFile.write("</raw>\n")
+
+    def visit_rubric(self, node):
+        self.dumpFile.write("<rubric>\n")
+
+    def depart_rubric(self, node):
+        self.dumpFile.write("</rubric>\n")
+
+    def visit_substitution_definition(self, node):
+        self.dumpFile.write("<substitution_definition>\n")
+
+    def depart_substitution_definition(self, node):
+        self.dumpFile.write("</substitution_definition>\n")
+
+    def visit_system_message(self, node):
+        self.dumpFile.write("<system_message>\n")
+
+    def depart_system_message(self, node):
+        self.dumpFile.write("</system_message>\n")
+
+    def visit_table(self, node):
+        self.dumpFile.write("<table>\n")
+
+    def depart_table(self, node):
+        self.dumpFile.write("</table>\n")
+
+    def visit_target(self, node):
+        self.dumpFile.write("<target>\n")
+
+    def depart_target(self, node):
+        self.dumpFile.write("</target>\n")
+
+    def visit_tip(self, node):
+        self.dumpFile.write("<tip>\n")
+
+    def depart_tip(self, node):
+        self.dumpFile.write("</tip>\n")
+
+    def visit_warning(self, node):
+        self.dumpFile.write("<warning>\n")
+
+    def depart_warning(self, node):
+        self.dumpFile.write("</warning>\n")
+
+    def visit_attribution(self, node):
+        self.dumpFile.write("<attribution>\n")
+
+    def depart_attribution(self, node):
+        self.dumpFile.write("</attribution>\n")
+
+    def visit_caption(self, node):
+        self.dumpFile.write("<caption>\n")
+
+    def depart_caption(self, node):
+        self.dumpFile.write("</caption>\n")
+
+    def visit_classifier(self, node):
+        self.dumpFile.write("<classifier>\n")
+
+    def depart_classifier(self, node):
+        self.dumpFile.write("</classifier>\n")
+
+    def visit_colspec(self, node):
+        self.dumpFile.write("<colspec>\n")
+
+    def depart_colspec(self, node):
+        self.dumpFile.write("</colspec>\n")
+
+    def visit_field_name(self, node):
+        self.dumpFile.write("<field_name>\n")
+
+    def depart_field_name(self, node):
+        self.dumpFile.write("</field_name>\n")
+
     def visit_label(self, node):
-        if self.in_citation:
-            self.markdown_lines.append("\[")
+        self.dumpFile.write("<label>\n")
 
     def depart_label(self, node):
-        if self.in_citation:
-            self.markdown_lines.append("\] ")
+        self.dumpFile.write("</label>\n")
 
-    # ================
-    #  code blocks are implemented in the superclass.
-    # ================
-    def visit_literal_block(self, node):
-        JupyterCodeTranslator.visit_literal_block(self, node)
+    def visit_line(self, node):
+        self.dumpFile.write("<line>\n")
 
-        if self.in_code_block:
-            self.add_markdown_cell()
+    def depart_line(self, node):
+        self.dumpFile.write("</line>\n")
+
+    def visit_option_argument(self, node):
+        self.dumpFile.write("<option_argument>\n")
+
+    def depart_option_argument(self, node):
+        self.dumpFile.write("</option_argument>\n")
+
+    def visit_option_string(self, node):
+        self.dumpFile.write("<option_string>\n")
+
+    def depart_option_string(self, node):
+        self.dumpFile.write("</option_string>\n")
+
+    def visit_term(self, node):
+        self.dumpFile.write("<term>\n")
+
+    def depart_term(self, node):
+        self.dumpFile.write("</term>\n")
+
+    def visit_definition(self, node):
+        self.dumpFile.write("<definition>\n")
+
+    def depart_definition(self, node):
+        self.dumpFile.write("</definition>\n")
+
+    def visit_definition_list_item(self, node):
+        self.dumpFile.write("<definition_list_item>\n")
+
+    def depart_definition_list_item(self, node):
+        self.dumpFile.write("</definition_list_item>\n")
+
+    def visit_description(self, node):
+        self.dumpFile.write("<description>\n")
+
+    def depart_description(self, node):
+        self.dumpFile.write("</description>\n")
+
+    def visit_entry(self, node):
+        self.dumpFile.write("<entry>\n")
+
+    def depart_entry(self, node):
+        self.dumpFile.write("</entry>\n")
+
+    def visit_field(self, node):
+        self.dumpFile.write("<field>\n")
+
+    def depart_field(self, node):
+        self.dumpFile.write("</field>\n")
+
+    def visit_field_body(self, node):
+        self.dumpFile.write("<field_body>\n")
+
+    def depart_field_body(self, node):
+        self.dumpFile.write("</field_body>\n")
+
+    def visit_legend(self, node):
+        self.dumpFile.write("<legend>\n")
+
+    def depart_legend(self, node):
+        self.dumpFile.write("</legend>\n")
+
+    def visit_list_item(self, node):
+        self.dumpFile.write("<list_item>\n")
+
+    def depart_list_item(self, node):
+        self.dumpFile.write("</list_item>\n")
+
+    def visit_option(self, node):
+        self.dumpFile.write("<option>\n")
+
+    def depart_option(self, node):
+        self.dumpFile.write("</option>\n")
+
+    def visit_option_group(self, node):
+        self.dumpFile.write("<option_group>\n")
+
+    def depart_option_group(self, node):
+        self.dumpFile.write("</option_group>\n")
+
+    def visit_option_list_item(self, node):
+        self.dumpFile.write("<option_list_item>\n")
+
+    def depart_option_list_item(self, node):
+        self.dumpFile.write("</option_list_item>\n")
+
+    def visit_row(self, node):
+        self.dumpFile.write("<row>\n")
+
+    def depart_row(self, node):
+        self.dumpFile.write("</row>\n")
+
+    def visit_tbody(self, node):
+        self.dumpFile.write("<tbody>\n")
+
+    def depart_tbody(self, node):
+        self.dumpFile.write("</tbody>\n")
+
+    def visit_tgroup(self, node):
+        self.dumpFile.write("<tgroup>\n")
+
+    def depart_tgroup(self, node):
+        self.dumpFile.write("</tgroup>\n")
+
+    def visit_thead(self, node):
+        self.dumpFile.write("<thead>\n")
+
+    def depart_thead(self, node):
+        self.dumpFile.write("</thead>\n")
+
+    def visit_abbreviation(self, node):
+        self.dumpFile.write("<abbreviation>\n")
+
+    def depart_abbreviation(self, node):
+        self.dumpFile.write("</abbreviation>\n")
+
+    def visit_acronym(self, node):
+        self.dumpFile.write("<acronym>\n")
+
+    def depart_acronym(self, node):
+        self.dumpFile.write("</acronym>\n")
+
+    def visit_citation_reference(self, node):
+        self.dumpFile.write("<citation_reference>\n")
+
+    def depart_citation_reference(self, node):
+        self.dumpFile.write("</citation_reference>\n")
+
+    def visit_emphasis(self, node):
+        self.dumpFile.write("<emphasis>\n")
+
+    def depart_emphasis(self, node):
+        self.dumpFile.write("</emphasis>\n")
+
+    def visit_footnote_reference(self, node):
+        self.dumpFile.write("<footnote_reference>\n")
+
+    def depart_footnote_reference(self, node):
+        self.dumpFile.write("</footnote_reference>\n")
+
+    def visit_generated(self, node):
+        self.dumpFile.write("<generated>\n")
+
+    def depart_generated(self, node):
+        self.dumpFile.write("</generated>\n")
+
+    def visit_image(self, node):
+        self.dumpFile.write("<image>\n")
+
+    def depart_image(self, node):
+        self.dumpFile.write("</image>\n")
+
+    def visit_inline(self, node):
+        self.dumpFile.write("<inline>\n")
+
+    def depart_inline(self, node):
+        self.dumpFile.write("</inline>\n")
+
+    def visit_literal(self, node):
+        self.dumpFile.write("<literal>\n")
+
+    def depart_literal(self, node):
+        self.dumpFile.write("</literal>\n")
+
+    def visit_math(self, node):
+        self.dumpFile.write("<math>\n")
+
+    def depart_math(self, node):
+        self.dumpFile.write("</math>\n")
+
+    def visit_problematic(self, node):
+        self.dumpFile.write("<problematic>\n")
+
+    def depart_problematic(self, node):
+        self.dumpFile.write("</problematic>\n")
+
+    def visit_reference(self, node):
+        self.dumpFile.write("<reference>\n")
+
+    def depart_reference(self, node):
+        self.dumpFile.write("</reference>\n")
+
+    def visit_strong(self, node):
+        self.dumpFile.write("<strong>\n")
+
+    def depart_strong(self, node):
+        self.dumpFile.write("</strong>\n")
+
+    def visit_subscript(self, node):
+        self.dumpFile.write("<subscript>\n")
+
+    def depart_subscript(self, node):
+        self.dumpFile.write("</subscript>\n")
+
+    def visit_substitution_reference(self, node):
+        self.dumpFile.write("<substitution_reference>\n")
+
+    def depart_substitution_reference(self, node):
+        self.dumpFile.write("</substitution_reference>\n")
+
+    def visit_superscript(self, node):
+        self.dumpFile.write("<superscript>\n")
+
+    def depart_superscript(self, node):
+        self.dumpFile.write("</superscript>\n")
+
+    def visit_target(self, node):
+        self.dumpFile.write("<target>\n")
+
+    def depart_target(self, node):
+        self.dumpFile.write("</target>\n")
+
+    def visit_title_reference(self, node):
+        self.dumpFile.write("<title_reference>\n")
+
+    def depart_title_reference(self, node):
+        self.dumpFile.write("</title_reference>\n")
+
+    def visit_raw(self, node):
+        self.dumpFile.write("<raw>\n")
+
+    def depart_raw(self, node):
+        self.dumpFile.write("</raw>\n")
+
 
     # ===================
     #  general methods
