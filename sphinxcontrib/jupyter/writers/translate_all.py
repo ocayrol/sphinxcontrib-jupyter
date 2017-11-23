@@ -37,27 +37,50 @@ class JupyterTranslator(JupyterCodeTranslator):
         fileName = document.settings._source.split("/")[-1].split(".")[0] + ".xmlDump"
         self.dumpFile = open("/home/nsifniotis/PycharmProjects/dumpfiles/" + fileName, "w")
 
+        self.currentStack = []
+
     # specific visit and depart methods
     # ---------------------------------
 
     def visit_document(self, node):
         self.dumpFile.write("<document>\n")
 
+        newList = []
+        self.currentStack.append(newList)
+
     def depart_document(self, node):
-        self.dumpFile.write("</document>\n")
+        self.dumpFile.write("</document>\n\n")
+
+        documentData = self.currentStack.pop()
+        self.dumpFile.write("".join(documentData) + "\n")
         self.dumpFile.close()
 
     def visit_Text(self, node):
         self.dumpFile.write("<text>\n")
 
+        self.currentStack[-1].append(node.astext())
+
     def depart_Text(self, node):
+        """
+        Explicit silent pass.
+        :param node:
+        :return:
+        """
         self.dumpFile.write("</text>\n")
+        pass
 
     def visit_section(self, node):
         self.dumpFile.write("<section>\n")
 
+        newList = []
+        self.currentStack.append(newList)
+
     def depart_section(self, node):
         self.dumpFile.write("</section>\n")
+
+        sectionData = self.currentStack.pop()
+        sectionData = "\n\n".join(sectionData)
+        self.currentStack[-1].append(sectionData)
 
     def visit_topic(self, node):
         self.dumpFile.write("<topic>\n")
@@ -74,8 +97,17 @@ class JupyterTranslator(JupyterCodeTranslator):
     def visit_title(self, node):
         self.dumpFile.write("<title>\n")
 
+        newList = []
+        self.currentStack.append(newList)
+
     def depart_title(self, node):
         self.dumpFile.write("</title>\n")
+
+        titleText = "".join(self.currentStack.pop())
+        titleLen = len(titleText)
+
+        self.currentStack[-1].append(titleText + "\n")
+        self.currentStack[-1].append("=" * titleLen + "\n")
 
     def visit_subtitle(self, node):
         self.dumpFile.write("<subtitle>\n")
@@ -200,8 +232,26 @@ class JupyterTranslator(JupyterCodeTranslator):
     def visit_bullet_list(self, node):
         self.dumpFile.write("<bullet_list>\n")
 
+        newList = []
+        self.currentStack.append(newList)
+
     def depart_bullet_list(self, node):
         self.dumpFile.write("</bullet_list>\n")
+
+        fullText = ""
+        children = self.currentStack.pop()
+        self.warn("Children to process: " + str(children))
+        for child in children:
+            childParts = child.strip().split("\n")
+
+            first = True
+            for part in childParts:
+                append = "* " if first else "  "
+                first = False
+                fullText += append + part
+                fullText += "\n"
+        self.warn("Produced List : " + fullText)
+        self.currentStack[-1].append(fullText)
 
     def visit_caution(self, node):
         self.dumpFile.write("<caution>\n")
@@ -254,8 +304,30 @@ class JupyterTranslator(JupyterCodeTranslator):
     def visit_enumerated_list(self, node):
         self.dumpFile.write("<enumerated_list>\n")
 
+        newList = []
+        self.currentStack.append(newList)
+
     def depart_enumerated_list(self, node):
         self.dumpFile.write("</enumerated_list>\n")
+
+        fullText = ""
+        children = self.currentStack.pop()
+        self.warn("Children to process: " + str(children))
+        counter = 1
+        for child in children:
+            childParts = child.strip().split("\n")
+
+            first = True
+            for part in childParts:
+                append = str(counter) + ". " if first else "   "
+                first = False
+                fullText += append + part
+                fullText += "\n"
+
+            counter += 1
+
+        self.warn("Produced List : " + fullText)
+        self.currentStack[-1].append(fullText)
 
     def visit_error(self, node):
         self.dumpFile.write("<error>\n")
@@ -326,8 +398,16 @@ class JupyterTranslator(JupyterCodeTranslator):
     def visit_paragraph(self, node):
         self.dumpFile.write("<paragraph>\n")
 
+        newLine = []
+        self.currentStack.append(newLine)
+
     def depart_paragraph(self, node):
         self.dumpFile.write("</paragraph>\n")
+
+        children = self.currentStack.pop()
+        childText = "".join(children)
+
+        self.currentStack[-1].append(childText)
 
     def visit_pending(self, node):
         self.dumpFile.write("<pending>\n")
@@ -488,8 +568,15 @@ class JupyterTranslator(JupyterCodeTranslator):
     def visit_list_item(self, node):
         self.dumpFile.write("<list_item>\n")
 
+        newList = []
+        self.currentStack.append(newList)
+
     def depart_list_item(self, node):
         self.dumpFile.write("</list_item>\n")
+
+        children = self.currentStack.pop()
+        me = "\n\n".join(children)
+        self.currentStack[-1].append(me)
 
     def visit_option(self, node):
         self.dumpFile.write("<option>\n")
@@ -554,8 +641,17 @@ class JupyterTranslator(JupyterCodeTranslator):
     def visit_emphasis(self, node):
         self.dumpFile.write("<emphasis>\n")
 
+        newList = []
+        self.currentStack.append( newList )
+
     def depart_emphasis(self, node):
         self.dumpFile.write("</emphasis>\n")
+
+        children = self.currentStack.pop()
+        # self.warn("Em Popping: " + str(children))
+        me = "*" + "".join(children) + "*"
+
+        self.currentStack[-1].append(me)
 
     def visit_footnote_reference(self, node):
         self.dumpFile.write("<footnote_reference>\n")
@@ -608,8 +704,17 @@ class JupyterTranslator(JupyterCodeTranslator):
     def visit_strong(self, node):
         self.dumpFile.write("<strong>\n")
 
+        newList = []
+        self.currentStack.append(newList)
+
     def depart_strong(self, node):
         self.dumpFile.write("</strong>\n")
+
+        children = self.currentStack.pop()
+        # self.warn("Str Popping: " + str(children))
+        me = "**" + "".join(children) + "**"
+
+        self.currentStack[-1].append(me)
 
     def visit_subscript(self, node):
         self.dumpFile.write("<subscript>\n")
