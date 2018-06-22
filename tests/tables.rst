@@ -16,8 +16,19 @@ A simple rst table with header
 | c    | d    |
 +------+------+
 
-**Note:** Tables without a header are currently not supported as markdown does
-not support tables without headers.
+A simple rst table without header
+
++------+------+
+| a    | b    |
++------+------+
+| c    | d    |
++------+------+
+| e    | f    |
++------+------+
+
+**Note:** As markdown does not support tables without headers, an empty header
+is inserted in those tables.
+
 
 
 Simple Tables

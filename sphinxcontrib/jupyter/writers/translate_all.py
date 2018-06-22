@@ -165,6 +165,7 @@ class JupyterTranslator(JupyterCodeTranslator):
         self.table_builder['column_widths'] = []
         self.table_builder['lines'] = []
         self.table_builder['line_pending'] = ""
+        self.table_builder['has_thead'] = False
 
         if 'align' in node:
             self.table_builder['align'] = node['align']
@@ -178,17 +179,22 @@ class JupyterTranslator(JupyterCodeTranslator):
 
     def visit_thead(self, node):
         """ Table Header """
-        self.table_builder['current_line'] = 0
+        self.table_builder['has_thead'] = True
 
-    def depart_thead(self, node):
-        """ create the header line which contains the alignment for each column """
-        header_line = "|"
+    def visit_tbody(self, node):
+        """ create the separation line between header and body, that contains
+        the alignment for each column """
+        # Add an empty header if there is none
+        if  not self.table_builder['has_thead']:
+            header_line = "|" * (len(self.table_builder['column_widths']) + 1)
+            self.table_builder['lines'].append(header_line + "\n")
+        # Add a separation line between header and body
+        sep_line = "|"
         for col_width in self.table_builder['column_widths']:
-            header_line += self.generate_alignment_line(
+            sep_line += self.generate_alignment_line(
                 col_width, self.table_builder['align'])
-            header_line += "|"
-
-        self.table_builder['lines'].append(header_line + "\n")
+            sep_line += "|"
+        self.table_builder['lines'].append(sep_line + "\n")
 
     def generate_alignment_line(self, line_length, alignment):
         left = ":" if alignment != "right" else "-"
