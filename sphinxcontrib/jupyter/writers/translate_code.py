@@ -194,13 +194,20 @@ class JupyterCodeTranslator(docutils.nodes.GenericNodeVisitor):
                 self.output_cell_type = JupyterOutputCellGenerators.MARKDOWN
 
     def depart_literal_block(self, node):
-        if self.solution and self.jupyter_drop_solutions:    
-            pass # Skip solutions if we say to. 
+        if self.solution and self.jupyter_drop_solutions:
+            pass # Skip solutions if we say to.
         elif self.test and self.jupyter_drop_tests:
             pass # Skip tests if we say to.
-        else: # Don't skip otherwise. 
+        else: # Don't skip otherwise
             line_text = "".join(self.code_lines)
             formatted_line_text = self.strip_blank_lines_in_end_of_block(line_text)
+            ############
+            # Changes NT
+            from .sage import reformat_sage_block
+            self.output["cells"].extend(reformat_sage_block(formatted_line_text, self))
+            self.in_code_block = False
+            return
+            ############
 
             new_code_cell = self.output_cell_type.Generate(formatted_line_text, self)
             #Save Collapse Cell Option for HTML Parser
