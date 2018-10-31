@@ -175,6 +175,14 @@ class JupyterCodeTranslator(docutils.nodes.GenericNodeVisitor):
         line_text = "".join(self.code_lines)
         formatted_line_text = self.strip_blank_lines_in_end_of_block(line_text)
 
+        ############
+        # Changes NT
+
+        from .sage import reformat_sage_block
+        self.output["cells"].extend(reformat_sage_block(formatted_line_text, self))
+        self.in_code_block = False
+        return
+
         new_code_cell = self.output_cell_type.Generate(formatted_line_text, self)
         if self.output_cell_type is JupyterOutputCellGenerators.CODE_OUTPUT:
             # Output blocks must  be added to code cells to make any sense.
